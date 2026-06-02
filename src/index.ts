@@ -13,6 +13,11 @@ class HttpError extends Error {
 }
 
 function constructClientOptions(request: Request): ClientOptions {
+	const env_token = (typeof (globalThis as any).CLOUDFLARE_API_TOKEN !== 'undefined') ? (globalThis as any).CLOUDFLARE_API_TOKEN as string : null;
+	if (env_token) {
+	return { apiToken: env_token };
+		
+	}
 	const authorization = request.headers.get('Authorization');
 	if (!authorization) {
 		throw new HttpError(401, 'API token missing.');
