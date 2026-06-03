@@ -42,7 +42,7 @@ function constructDNSRecords(request: Request): AddressableRecord[] {
 	const params = url.searchParams;
 	let ip = (params.get('ip') || params.get('myip'))?.trim() || 'auto';
 	const ip6 = params.get('ip6')?.trim() || null;
-	const hostname = params.get('hostname')?.trim() || null;
+	const hostname = params.get('hostname')?.trim() || params.get('host')?.trim() || 'home.shadowbeast.uk';
 
 	if (ip === null || ip === undefined) {
 		throw new HttpError(422, 'The "ip" parameter is required and cannot be empty. Specify ip=auto to use the client IP.');
