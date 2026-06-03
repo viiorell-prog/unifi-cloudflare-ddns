@@ -113,8 +113,7 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 						name: newRecord.name as any,
 						type: newRecord.type,
 				})
-				type: newRecord.type,
-			})
+			
 		).result;
 
 		if (records.length > 1) {
