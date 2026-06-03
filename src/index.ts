@@ -130,6 +130,9 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 		const comment = currentRecord.comment;
 
 				console.log('IP being used: ' + newRecord.content);
+		if (newRecord.content && newRecord.content.includes(':')) {
+				continue;
+		}
 		await cloudflare.dns.records.update(records[0].id, {
 			content: newRecord.content,
 			zone_id: zone.id,
