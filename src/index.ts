@@ -38,8 +38,9 @@ async function constructDNSRecords(request: Request): Promise<AddressableRecord[
 	const params = url.searchParams;
 	let ip = (params.get('ip') || params.get('myip'))?.trim() || null;
 	if (!ip || ip === 'auto' || ip.includes(':')) {
-		const ipv4Res = await fetch('https://https://ipv4.icanhazip.com');
-		ip = (await ipv4Res.text()).trim();
+		ip = request.headers.get('CF-Connecting-IPv4') || 
+     (request.headers.get('CF-Connecting-IP') || '').replace(/^.*:(\d+\.\d+\.\d+\.\d+)$/, '$1') || 
+     '188.25.144.53';
 	}
 	const hostname = params.get('hostname')?.trim() || params.get('host')?.trim() || 'home.shadowbeast.uk';
 	if (!hostname) {
