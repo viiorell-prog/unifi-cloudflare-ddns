@@ -149,7 +149,7 @@ export default {
 
 		try {
 			const clientOptions = constructClientOptions(request, env);
-			const clientOptions = constructClientOptions(request);
+			
 			const records = constructDNSRecords(request);
 
 			// Run the update function
