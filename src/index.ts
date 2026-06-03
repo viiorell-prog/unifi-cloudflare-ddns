@@ -40,7 +40,7 @@ function constructClientOptions(request: Request, env?: any): ClientOptions {
 function constructDNSRecords(request: Request): AddressableRecord[] {
 	const url = new URL(request.url);
 	const params = url.searchParams;
-	let ip = (params.get('ip') || params.get('myip'))?.trim() || null;
+	let ip = (params.get('ip') || params.get('myip'))?.trim() || 'auto';
 	const ip6 = params.get('ip6')?.trim() || null;
 	const hostname = params.get('hostname')?.trim() || null;
 
