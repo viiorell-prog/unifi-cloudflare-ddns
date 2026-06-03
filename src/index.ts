@@ -68,7 +68,7 @@ function constructDNSRecords(request: Request): AddressableRecord[] {
 		records.push({
 			content: ip,
 			name,
-			type: ip.includes('.') ? 'A' : 'AAAA',
+			type: 'A',
 			ttl: 1,
 		});
 
@@ -130,7 +130,7 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 			content: newRecord.content,
 			zone_id: zone.id,
 			name: newRecord.name as any,
-			type: newRecord.type,
+			type: 'A',
 			ttl: newRecord.ttl,
 			proxied, // Pass the existing "proxied" status
 			comment, // Pass the existing "comment"
