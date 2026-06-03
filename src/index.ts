@@ -2,9 +2,12 @@ import { Cloudflare } from 'cloudflare';
 
 async function updateDNS(env: any): Promise<void> {
 	const apiToken = env?.CLOUDFLARE_API_TOKEN;
-	if (!apiToken) throw new Error('No API token');
-
-	const ipRes = await fetch('https://api.ipify.org?format=text', { cf: { resolveOverride: 'api.ipify.org' } } as any);
+	const ipRes = await fetch('https://1.1.1.1/cdn-cgi/trace');
+	const traceText = await ipRes.text();
+	const ipMatch = traceText.match(/ip=(\d+\.\d+\.\d+\.\d+)/);
+	const ip = ipMatch ? ipMatch[1] : null;
+	if (!ip) throw new Error('Could not get IPv4 from trace');
+	console.log('Current IP: ' + ip);
 	const ip = (await ipRes.text()).trim();
 	if (!ip || ip.includes(':')) throw new Error('Could not get IPv4: ' + ip);
 	console.log('Current IP: ' + ip);
