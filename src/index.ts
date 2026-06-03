@@ -130,9 +130,10 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 		const comment = currentRecord.comment;
 
 				if (newRecord.content && newRecord.content.includes(':')) {
-				newRecord.content = request.headers.get('x-real-ip') || request.headers.get('x-forwarded-for') || '188.25.144.53';
+				const ipv4Response = await fetch('https://api4.ipify.org');
+				newRecord.content = await ipv4Response.text();
 		}
-		console.log('IP being used: ' + newRecord.content)
+		console.log('IP being used: ' + newRecord.content);
 		await cloudflare.dns.records.update(records[0].id, {
 			content: newRecord.content,
 			zone_id: zone.id,
