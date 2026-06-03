@@ -107,15 +107,14 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 
 	for (const newRecord of newRecords) {
 	console.log('Searching for record: ' + newRecord.name + ' in zone: ' + zone.name);
-		const records = (
+		const allRecords = (
 				await cloudflare.dns.records.list({
 						zone_id: zone.id,
-						name: newRecord.name.replace('.' + zone.name, '') as any,
-						type: 'A' as any,
 				})
-			
 		).result;
-
+		const recordName = newRecord.name.replace('.' + zone.name, '');
+		console.log('Looking for: ' + recordName);
+		const records = allRecords.filter((r: any) => r.name === newRecord.name || r.name === recordName);
 		if (records.length > 1) {
 			throw new HttpError(400, 'More than one matching record found!');
 		} else if (records.length === 0 || records[0].id === undefined) {
