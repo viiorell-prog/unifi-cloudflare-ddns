@@ -12,8 +12,8 @@ class HttpError extends Error {
 	}
 }
 
-function constructClientOptions(request: Request): ClientOptions {
-	const env_token = (typeof CLOUDFLARE_API_TOKEN !== 'undefined') ? CLOUDFLARE_API_TOKEN : null;
+function constructClientOptions(request: Request, env?: any): ClientOptions {
+	const env_token = (env && env.CLOUDFLARE_API_TOKEN) ? env.CLOUDFLARE_API_TOKEN : null;
 	if (env_token) {
 	return { apiToken: env_token };
 		
@@ -142,13 +142,13 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 }
 
 export default {
-	async fetch(request): Promise<Response> {
+	async fetch(request, env): Promise<Response> {
 		console.log('Requester IP: ' + request.headers.get('CF-Connecting-IP'));
 		console.log(request.method + ': ' + request.url);
 		console.log('Body: ' + (await request.text()));
 
 		try {
-			// Construct client options and DNS records
+			const clientOptions = constructClientOptions(request, env);
 			const clientOptions = constructClientOptions(request);
 			const records = constructDNSRecords(request);
 
