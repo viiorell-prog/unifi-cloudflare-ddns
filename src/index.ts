@@ -4,10 +4,15 @@ async function updateDNS(env: any): Promise<void> {
 	const apiToken = env?.CLOUDFLARE_API_TOKEN;
 	if (!apiToken) throw new Error('No API token');
 
-	const ipRes = await fetch('https://checkip.amazonaws.com');
-	const ip = (await ipRes.text()).trim();
-	if (!ip || ip.includes(':')) throw new Error('Could not get IPv4: ' + ip);
-	console.log('Current IP: ' + ip);
+	// Citeste IP-ul de la No-IP hostname
+	const noipHostname = 'predatort7.ddns.net';
+	const dnsRes = await fetch('https://cloudflare-dns.com/dns-query?name=' + noipHostname + '&type=A', {
+		headers: { 'Accept': 'application/dns-json' }
+	});
+	const dnsData: any = await dnsRes.json();
+	const ip = dnsData?.Answer?.[0]?.data;
+	if (!ip || ip.includes(':')) throw new Error('Could not get IP from No-IP: ' + JSON.stringify(dnsData));
+	console.log('IP from No-IP: ' + ip);
 
 	const cloudflare = new Cloudflare({ apiToken });
 	const zones = (await cloudflare.zones.list()).result;
