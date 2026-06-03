@@ -37,12 +37,14 @@ function constructClientOptions(request: Request, env?: any): ClientOptions {
 	};
 }
 
-function constructDNSRecords(request: Request): AddressableRecord[] {
+async function constructDNSRecords(request: Request): Promise<AddressableRecord[]> {
 	const url = new URL(request.url);
 	const params = url.searchParams;
 	let ip = (params.get('ip') || params.get('myip'))?.trim() || null;
 if (!ip || ip === 'auto' || ip.includes(':')) {
-    ip = request.headers.get('CF-Connecting-IP') || null;
+    const ipv4Res = await fetch('https://api4.ipify.org');
+    ip = await ipv4Res.text();
+}
 }
 	const ip6 = params.get('ip6')?.trim() || null;
 	const hostname = params.get('hostname')?.trim() || params.get('host')?.trim() || 'home.shadowbeast.uk';
@@ -159,7 +161,7 @@ export default {
 		try {
 			const clientOptions = constructClientOptions(request, env);
 			
-			const records = constructDNSRecords(request);
+			const records = await constructDNSRecords(request);
 
 			// Run the update function
 			return await update(clientOptions, records);
