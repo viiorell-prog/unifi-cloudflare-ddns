@@ -49,4 +49,69 @@ async function constructDNSRecords(request: Request): Promise<AddressableRecord[
 	if (!ip) {
 		throw new HttpError(422, 'Could not determine IPv4 address.');
 	}
-	const hostname = params.get('hostname')?.trim() || params.get('host')?.trim() ||
+	const hostname = params.get('hostname')?.trim() || params.get('host')?.trim() || 'home.shadowbeast.uk';
+	const hostnames = hostname.split(',').map((h) => h.trim()).filter(Boolean);
+	const records: AddressableRecord[] = [];
+	for (const name of hostnames) {
+		records.push({ content: ip, name, type: 'A', ttl: 1 });
+	}
+	return records;
+}
+
+async function update(clientOptions: ClientOptions, newRecords: AddressableRecord[]): Promise<Response> {
+	const cloudflare = new Cloudflare(clientOptions);
+	const tokenStatus = (await cloudflare.user.tokens.verify()).status;
+	if (tokenStatus !== 'active') {
+		throw new HttpError(401, 'This API Token is ' + tokenStatus);
+	}
+	const zones = (await cloudflare.zones.list()).result;
+	if (zones.length > 1) {
+		throw new HttpError(400, 'More than one zone was found! You must supply an API Token scoped to a single zone.');
+	} else if (zones.length === 0) {
+		throw new HttpError(400, 'No zones found! You must supply an API Token scoped to a single zone.');
+	}
+	const zone = zones[0];
+	for (const newRecord of newRecords) {
+		const allRecords = (await cloudflare.dns.records.list({ zone_id: zone.id })).result;
+		const recordName = newRecord.name.replace('.' + zone.name, '');
+		console.log('Looking for: ' + recordName + ', IP: ' + newRecord.content);
+		const records = allRecords.filter((r: any) => (r.name === newRecord.name || r.name === recordName) && r.type === 'A');
+		if (records.length === 0 || records[0].id === undefined) {
+			throw new HttpError(400, 'No record found! You must first manually create the record.');
+		}
+		const currentRecord = records[0] as AddressableRecord;
+		const proxied = currentRecord.proxied ?? false;
+		const comment = currentRecord.comment;
+		await cloudflare.dns.records.update(records[0].id, {
+			content: newRecord.content,
+			zone_id: zone.id,
+			name: recordName as any,
+			type: 'A',
+			ttl: newRecord.ttl,
+			proxied,
+			comment,
+		});
+		console.log('DNS record for ' + newRecord.name + '(A) updated successfully to ' + newRecord.content);
+	}
+	return new Response('OK', { status: 200 });
+}
+
+export default {
+	async fetch(request, env): Promise<Response> {
+		console.log('Requester IP: ' + request.headers.get('CF-Connecting-IP'));
+		console.log(request.method + ': ' + request.url);
+		try {
+			const clientOptions = constructClientOptions(request, env);
+			const records = await constructDNSRecords(request);
+			return await update(clientOptions, records);
+		} catch (error) {
+			if (error instanceof HttpError) {
+				console.log('Error: ' + error.message);
+				return new Response(error.message, { status: error.statusCode });
+			} else {
+				console.log('Error: ' + error);
+				return new Response('Internal Server Error', { status: 500 });
+			}
+		}
+	},
+} satisfies ExportedHandler<Env>;
