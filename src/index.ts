@@ -106,10 +106,13 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 	const zone = zones[0];
 
 	for (const newRecord of newRecords) {
+	console.log('Searching for record: ' + newRecord.name + ' in zone: ' + zone.name);
 		const records = (
-			await cloudflare.dns.records.list({
-				zone_id: zone.id,
-				name: newRecord.name.replace('.' + zone.name, '') as any,
+				await cloudflare.dns.records.list({
+						zone_id: zone.id,
+						name: newRecord.name as any,
+						type: newRecord.type,
+				})
 				type: newRecord.type,
 			})
 		).result;
