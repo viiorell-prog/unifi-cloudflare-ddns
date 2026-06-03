@@ -129,10 +129,10 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 		const proxied = currentRecord.proxied ?? false; // Default to `false` if `proxied` is undefined
 		const comment = currentRecord.comment;
 
-				console.log('IP being used: ' + newRecord.content);
-		if (newRecord.content && newRecord.content.includes(':')) {
-				continue;
+				if (newRecord.content && newRecord.content.includes(':')) {
+				newRecord.content = request.headers.get('x-real-ip') || request.headers.get('x-forwarded-for') || '188.25.144.53';
 		}
+		console.log('IP being used: ' + newRecord.content)
 		await cloudflare.dns.records.update(records[0].id, {
 			content: newRecord.content,
 			zone_id: zone.id,
