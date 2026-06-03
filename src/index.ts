@@ -107,4 +107,20 @@ export default {
 		console.log('Requester IP: ' + request.headers.get('CF-Connecting-IP'));
 		console.log(request.method + ': ' + request.url);
 		try {
+			const clientOptions = constructClientOptions(request, env);
+			const records = await constructDNSRecords(request);
+			return await update(clientOptions, records);
+		} catch (error) {
+			if (error instanceof HttpError) {
+				console.log('Error updating DNS record: ' + error.message);
+				return new Response(error.message, { status: error.statusCode });
+			} else {
+				console.log('Error updating DNS record: ' + error);
+				return new Response('Internal Server Error', { status: 500 });
+			}
+		}
+	},
+} satisfies ExportedHandler<Env>;
+
+		try {
 			const clientOptions = cons
