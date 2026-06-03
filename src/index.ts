@@ -110,7 +110,7 @@ async function update(clientOptions: ClientOptions, newRecords: AddressableRecor
 		const records = (
 				await cloudflare.dns.records.list({
 						zone_id: zone.id,
-						name: newRecord.name as any,
+						name: newRecord.name.replace('.' + zone.name, '') as any,
 						type: newRecord.type,
 				})
 			
