@@ -40,7 +40,10 @@ function constructClientOptions(request: Request, env?: any): ClientOptions {
 function constructDNSRecords(request: Request): AddressableRecord[] {
 	const url = new URL(request.url);
 	const params = url.searchParams;
-	let ip = (params.get('ip') || params.get('myip'))?.trim() || 'auto';
+	let ip = (params.get('ip') || params.get('myip'))?.trim() || null;
+if (!ip || ip === 'auto' || ip.includes(':')) {
+    ip = request.headers.get('CF-Connecting-IP') || null;
+}
 	const ip6 = params.get('ip6')?.trim() || null;
 	const hostname = params.get('hostname')?.trim() || params.get('host')?.trim() || 'home.shadowbeast.uk';
 
