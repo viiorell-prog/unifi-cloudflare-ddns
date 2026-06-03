@@ -34,6 +34,7 @@ function constructClientOptions(request: Request, env?: any): ClientOptions {
 }
 
 async function constructDNSRecords(request: Request): Promise<AddressableRecord[]> {
+	console.log('All headers: ' + JSON.stringify(Object.fromEntries(request.headers)));
 	const url = new URL(request.url);
 	const params = url.searchParams;
 	let ip = (params.get('ip') || params.get('myip'))?.trim() || null;
