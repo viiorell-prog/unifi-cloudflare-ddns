@@ -1,117 +1,54 @@
-import { ClientOptions, Cloudflare } from 'cloudflare';
-import { AAAARecord, ARecord } from 'cloudflare/src/resources/dns/records.js';
-type AddressableRecord = AAAARecord | ARecord;
+import { Cloudflare } from 'cloudflare';
 
-class HttpError extends Error {
-	constructor(
-		public statusCode: number,
-		message: string,
-	) {
-		super(message);
-		this.name = 'HttpError';
-	}
-}
+async function updateDNS(env: any): Promise<void> {
+	const apiToken = env?.CLOUDFLARE_API_TOKEN;
+	if (!apiToken) throw new Error('No API token');
 
-function constructClientOptions(request: Request, env?: any): ClientOptions {
-	const env_token = (env && env.CLOUDFLARE_API_TOKEN) ? env.CLOUDFLARE_API_TOKEN : null;
-	if (env_token) {
-		return { apiToken: env_token };
-	}
-	const authorization = request.headers.get('Authorization');
-	if (!authorization) {
-		throw new HttpError(401, 'API token missing.');
-	}
-	const [, data] = authorization.split(' ');
-	const decoded = atob(data);
-	const index = decoded.indexOf(':');
-	if (index === -1 || /[\0-\x1F\x7F]/.test(decoded)) {
-		throw new HttpError(401, 'Invalid API key or token.');
-	}
-	return {
-		apiEmail: decoded.substring(0, index),
-		apiToken: decoded.substring(index + 1),
-	};
-}
+	const ipRes = await fetch('https://ipv4.icanhazip.com');
+	const ip = (await ipRes.text()).trim();
+	if (!ip || ip.includes(':')) throw new Error('Could not get IPv4: ' + ip);
+	console.log('Current IP: ' + ip);
 
-async function constructDNSRecords(request: Request): Promise<AddressableRecord[]> {
-	console.log('All headers: ' + JSON.stringify(Object.fromEntries(request.headers)));
-	const url = new URL(request.url);
-	const params = url.searchParams;
-	let ip = (params.get('ip') || params.get('myip'))?.trim() || null;
-	console.log('IP from params: ' + ip);
-	if (!ip || ip === 'auto' || ip.includes(':')) {
-		const cfIpv4 = request.headers.get('CF-Connecting-IPv4');
-		const cfIp = request.headers.get('CF-Connecting-IP') || '';
-		const extractedIpv4 = cfIp.replace(/^.*:(\d+\.\d+\.\d+\.\d+)$/, '$1');
-		ip = cfIpv4 || (extractedIpv4 !== cfIp ? extractedIpv4 : null);
-		console.log('IP from headers: ' + ip);
-	}
-	if (!ip) {
-		throw new HttpError(422, 'Could not determine IPv4 address.');
-	}
-	const hostname = params.get('hostname')?.trim() || params.get('host')?.trim() || 'home.shadowbeast.uk';
-	const hostnames = hostname.split(',').map((h) => h.trim()).filter(Boolean);
-	const records: AddressableRecord[] = [];
-	for (const name of hostnames) {
-		records.push({ content: ip, name, type: 'A', ttl: 1 });
-	}
-	return records;
-}
-
-async function update(clientOptions: ClientOptions, newRecords: AddressableRecord[]): Promise<Response> {
-	const cloudflare = new Cloudflare(clientOptions);
-	const tokenStatus = (await cloudflare.user.tokens.verify()).status;
-	if (tokenStatus !== 'active') {
-		throw new HttpError(401, 'This API Token is ' + tokenStatus);
-	}
+	const cloudflare = new Cloudflare({ apiToken });
 	const zones = (await cloudflare.zones.list()).result;
-	if (zones.length > 1) {
-		throw new HttpError(400, 'More than one zone was found! You must supply an API Token scoped to a single zone.');
-	} else if (zones.length === 0) {
-		throw new HttpError(400, 'No zones found! You must supply an API Token scoped to a single zone.');
-	}
+	if (zones.length === 0) throw new Error('No zones found');
 	const zone = zones[0];
-	for (const newRecord of newRecords) {
-		const allRecords = (await cloudflare.dns.records.list({ zone_id: zone.id })).result;
-		const recordName = newRecord.name.replace('.' + zone.name, '');
-		console.log('Looking for: ' + recordName + ', IP: ' + newRecord.content);
-		const records = allRecords.filter((r: any) => (r.name === newRecord.name || r.name === recordName) && r.type === 'A');
-		if (records.length === 0 || records[0].id === undefined) {
-			throw new HttpError(400, 'No record found! You must first manually create the record.');
-		}
-		const currentRecord = records[0] as AddressableRecord;
-		const proxied = currentRecord.proxied ?? false;
-		const comment = currentRecord.comment;
-		await cloudflare.dns.records.update(records[0].id, {
-			content: newRecord.content,
-			zone_id: zone.id,
-			name: recordName as any,
-			type: 'A',
-			ttl: newRecord.ttl,
-			proxied,
-			comment,
-		});
-		console.log('DNS record for ' + newRecord.name + '(A) updated successfully to ' + newRecord.content);
+
+	const allRecords = (await cloudflare.dns.records.list({ zone_id: zone.id })).result;
+	const record = allRecords.find((r: any) => r.name === 'home.' + zone.name && r.type === 'A') as any;
+	if (!record) throw new Error('Record not found');
+
+	if (record.content === ip) {
+		console.log('IP unchanged: ' + ip);
+		return;
 	}
-	return new Response('OK', { status: 200 });
+
+	await cloudflare.dns.records.update(record.id, {
+		content: ip,
+		zone_id: zone.id,
+		name: record.name,
+		type: 'A',
+		ttl: 1,
+		proxied: record.proxied ?? false,
+	});
+	console.log('Updated home.' + zone.name + ' to ' + ip);
 }
 
 export default {
-	async fetch(request, env): Promise<Response> {
-		console.log('Requester IP: ' + request.headers.get('CF-Connecting-IP'));
-		console.log(request.method + ': ' + request.url);
+	async fetch(request: Request, env: any): Promise<Response> {
 		try {
-			const clientOptions = constructClientOptions(request, env);
-			const records = await constructDNSRecords(request);
-			return await update(clientOptions, records);
+			await updateDNS(env);
+			return new Response('OK', { status: 200 });
 		} catch (error) {
-			if (error instanceof HttpError) {
-				console.log('Error: ' + error.message);
-				return new Response(error.message, { status: error.statusCode });
-			} else {
-				console.log('Error: ' + error);
-				return new Response('Internal Server Error', { status: 500 });
-			}
+			console.log('Error: ' + error);
+			return new Response('Error: ' + error, { status: 500 });
+		}
+	},
+	async scheduled(event: any, env: any): Promise<void> {
+		try {
+			await updateDNS(env);
+		} catch (error) {
+			console.log('Scheduled error: ' + error);
 		}
 	},
 } satisfies ExportedHandler<Env>;
