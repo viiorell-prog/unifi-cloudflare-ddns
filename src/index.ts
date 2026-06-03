@@ -4,7 +4,7 @@ async function updateDNS(env: any): Promise<void> {
 	const apiToken = env?.CLOUDFLARE_API_TOKEN;
 	if (!apiToken) throw new Error('No API token');
 
-	const ipRes = await fetch('https://ipv4.icanhazip.com');
+	const ipRes = await fetch('https://api.ipify.org?format=text', { cf: { resolveOverride: 'api.ipify.org' } } as any);
 	const ip = (await ipRes.text()).trim();
 	if (!ip || ip.includes(':')) throw new Error('Could not get IPv4: ' + ip);
 	console.log('Current IP: ' + ip);
