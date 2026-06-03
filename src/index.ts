@@ -13,7 +13,7 @@ class HttpError extends Error {
 }
 
 function constructClientOptions(request: Request): ClientOptions {
-	const env_token = (typeof (self as any).CLOUDFLARE_API_TOKEN !== 'undefined') ? (self as any).CLOUDFLARE_API_TOKEN as string : null;
+	const env_token = (typeof CLOUDFLARE_API_TOKEN !== 'undefined') ? CLOUDFLARE_API_TOKEN : null;
 	if (env_token) {
 	return { apiToken: env_token };
 		
