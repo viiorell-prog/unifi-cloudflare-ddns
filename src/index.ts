@@ -121,6 +121,3 @@ export default {
 		}
 	},
 } satisfies ExportedHandler<Env>;
-
-		try {
-			const clientOptions = cons
