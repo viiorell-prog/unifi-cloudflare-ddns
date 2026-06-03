@@ -8,7 +8,7 @@ async function updateDNS(env: any): Promise<void> {
 	const ip = ipMatch ? ipMatch[1] : null;
 	if (!ip) throw new Error('Could not get IPv4 from trace');
 	console.log('Current IP: ' + ip);
-	const ip = (await ipRes.text()).trim();
+	
 	if (!ip || ip.includes(':')) throw new Error('Could not get IPv4: ' + ip);
 	console.log('Current IP: ' + ip);
 
